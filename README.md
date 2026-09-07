@@ -10,7 +10,7 @@ working, done, or waiting on you.
 
 ![Collapsed notch with hover tooltip](docs/design/frame-124-hover-tooltip.png)
 
-Hover a ring for its limit windows and when they reset. Claude's ring shows the
+Click a ring for its limit windows and when they reset. Claude's ring shows the
 same **current session** window Claude Code's own `/usage` leads with, so the
 two never disagree.
 

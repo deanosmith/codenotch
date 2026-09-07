@@ -171,6 +171,11 @@ final class FoldedNotchTests: XCTestCase {
     func testTheWakeRegionIsLargerThanThePill() {
         XCTAssertGreaterThan(NotchLayout.pillHotZone, NotchLayout.pillWidth)
     }
+
+    /// Cut from the original 90px band so the notch does not open as far out.
+    func testTheWakeRegionIsFifteenPercentTighterThanTheOriginalBand() {
+        XCTAssertEqual(NotchLayout.pillHotZone, Design.px(90) * 0.85, accuracy: 0.001)
+    }
 }
 
 /// Motion is a vocabulary, not a pile of magic numbers.
@@ -320,8 +325,8 @@ final class TooltipCohesionTests: XCTestCase {
     }
 }
 
-/// The rings are buttons — clicking one refetches that provider — so the cursor
-/// should say so, and only there.
+/// The rings are buttons — clicking one opens that provider's usage card and
+/// refetches it — so the cursor should say so, and only there.
 @MainActor
 final class PointerStateTests: XCTestCase {
     func testACellShowsThePointingHand() {

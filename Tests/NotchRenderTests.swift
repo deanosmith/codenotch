@@ -395,6 +395,116 @@ final class AlwaysShowTests: XCTestCase {
     }
 }
 
+/// Usage cards open on a click, not on hover. Hovering the screen edge was
+/// enough to pop a card and then keep swapping it as the pointer drifted —
+/// which is what this pins against.
+@MainActor
+final class UsageCardClickTests: XCTestCase {
+    private func makeController() -> NotchWindowController {
+        let controller = NotchWindowController()
+        controller.model.isExpanded = true
+        controller.model.isAlwaysOn = true
+        controller.model.snapshots = (0..<2).map { index in
+            ProviderSnapshot(
+                id: "p\(index)", displayName: "P\(index)", glyph: .claude,
+                fidelity: .official, status: .ok,
+                windows: [LimitWindow(id: "w", label: "Session", usedFraction: 0.4)],
+                headlineID: "w"
+            )
+        }
+        return controller
+    }
+
+    private func ringPoint(_ controller: NotchWindowController, index: Int) -> CGPoint {
+        let model = controller.model
+        let place = NotchPlacement(edge: model.edge, panelSize: model.panelSize)
+        return place.point(
+            along: model.slack + model.ringCenter(index: index),
+            across: model.contentInset + NotchLayout.bodyDepth(for: model.edge) / 2
+        )
+    }
+
+    func testHoveringARingDoesNotOpenACard() {
+        let controller = makeController()
+        controller.pointerMoved(to: ringPoint(controller, index: 0))
+        XCTAssertNil(controller.model.selectedIndex)
+        XCTAssertNil(controller.model.selectedSnapshot)
+    }
+
+    func testClickingARingOpensItsCard() {
+        let controller = makeController()
+        var refreshed: String?
+        controller.onRefreshProvider = { refreshed = $0 }
+        controller.handleClick(at: ringPoint(controller, index: 0))
+        XCTAssertEqual(controller.model.selectedIndex, 0)
+        XCTAssertEqual(controller.model.selectedSnapshot?.id, "p0")
+        XCTAssertEqual(refreshed, "p0")
+    }
+
+    func testClickingTheSameRingClosesTheCard() {
+        let controller = makeController()
+        controller.handleClick(at: ringPoint(controller, index: 0))
+        controller.handleClick(at: ringPoint(controller, index: 0))
+        XCTAssertNil(controller.model.selectedIndex)
+    }
+
+    func testClickingAnotherRingSwitchesTheCard() {
+        let controller = makeController()
+        controller.handleClick(at: ringPoint(controller, index: 0))
+        controller.handleClick(at: ringPoint(controller, index: 1))
+        XCTAssertEqual(controller.model.selectedIndex, 1)
+        XCTAssertEqual(controller.model.selectedSnapshot?.id, "p1")
+    }
+
+    /// The card is sticky once opened: leaving the ring must not dismiss it
+    /// the way hover used to.
+    func testLeavingTheRingDoesNotDismissTheCard() {
+        let controller = makeController()
+        controller.handleClick(at: ringPoint(controller, index: 0))
+        controller.pointerMoved(to: .zero)
+        XCTAssertEqual(controller.model.selectedIndex, 0)
+    }
+
+    /// Clicking another app never reaches this panel — it is a hole there.
+    /// The card still has to go, and a hover-mode notch has to fold now rather
+    /// than wait for a pointer-leave that will not arrive.
+    func testClickingAwayDismissesTheCardAndFolds() {
+        let controller = makeController()
+        controller.model.isAlwaysOn = false
+        controller.handleClick(at: ringPoint(controller, index: 0))
+        XCTAssertEqual(controller.model.selectedIndex, 0)
+        XCTAssertTrue(controller.model.isExpanded)
+
+        controller.clickedAway()
+
+        XCTAssertNil(controller.model.selectedIndex, "the usage card stayed up")
+        XCTAssertFalse(controller.model.isExpanded, "hover-mode notch stayed open")
+    }
+
+    /// Always show is a standing choice. Clicking away must not fold it; it
+    /// must still put the popup down.
+    func testClickingAwayOnAlwaysShowKeepsTheNotch() {
+        let controller = makeController()
+        controller.apply(.alwaysShow)
+        controller.handleClick(at: ringPoint(controller, index: 0))
+
+        controller.clickedAway()
+
+        XCTAssertNil(controller.model.selectedIndex)
+        XCTAssertTrue(controller.model.isExpanded)
+        XCTAssertTrue(controller.model.staysOpen)
+    }
+
+    func testSwitchingDesktopDismissesTheCard() {
+        let controller = makeController()
+        controller.model.isAlwaysOn = false
+        controller.handleClick(at: ringPoint(controller, index: 0))
+        controller.leftTheEnvironment()
+        XCTAssertNil(controller.model.selectedIndex)
+        XCTAssertFalse(controller.model.isExpanded)
+    }
+}
+
 /// A click that arrives while the notch is still folded used to pin it —
 /// permanently, via `togglePinned()` — even though nobody had seen it open.
 /// The pill's own hot zone is deliberately generous, since it is a small

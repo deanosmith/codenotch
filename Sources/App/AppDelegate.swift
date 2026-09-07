@@ -190,7 +190,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             "cursor": CursorActivityMonitor(),
             "codex": CodexActivityMonitor(),
             "gemini": AntigravityActivityMonitor(),
-            "grok": GrokActivityMonitor()
+            "grok": GrokActivityMonitor(),
+            "copilot": CopilotActivityMonitor()
         ]
         for profile in claudeProfiles {
             monitors[profile.id] = ClaudeSessionMonitor(directory: profile.sessionsDirectory)

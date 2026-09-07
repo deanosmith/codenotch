@@ -36,7 +36,7 @@ struct NotchRootView: View {
                         .animation(motion(orbMotion), value: model.isExpanded)
                 }
 
-                if let snapshot = model.hoveredSnapshot, let index = model.hoveredIndex,
+                if let snapshot = model.selectedSnapshot, let index = model.selectedIndex,
                    model.isExpanded {
                     TooltipCard(
                         snapshot: snapshot,
@@ -59,7 +59,7 @@ struct NotchRootView: View {
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
             // Swapping cards is a movement like any other here.
-            .animation(motion(NotchMotion.glide), value: model.hoveredIndex)
+            .animation(motion(NotchMotion.glide), value: model.selectedIndex)
         }
         .animation(motion(NotchMotion.unfold), value: model.isExpanded)
     }
@@ -109,7 +109,7 @@ struct NotchRootView: View {
             )
                 // Pinned to what the cell claims along the stack, or the drawn
                 // rings stop lining up with the centres `ringCenter` hands to
-                // the hover bands and the tooltip tails. Across a horizontal
+                // the click bands and the tooltip tails. Across a horizontal
                 // edge that is the ring alone — the label sits below it, in the
                 // notch's depth, and claims nothing here.
                 .frame(width: model.edge.isVertical ? nil : NotchLayout.cellAlong(for: model.edge))
@@ -182,7 +182,7 @@ struct NotchRootView: View {
     }
 
     /// The tooltip is the card plus its tail; `position` centres that pair, so
-    /// the tail lands on the hovered cell and the card sits beyond it.
+    /// the tail lands on the selected cell and the card sits beyond it.
     private func tooltipCentre(
         _ place: NotchPlacement, index: Int, snapshot: ProviderSnapshot
     ) -> CGPoint {

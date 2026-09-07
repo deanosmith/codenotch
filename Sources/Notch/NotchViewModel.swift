@@ -10,11 +10,9 @@ final class NotchViewModel: ObservableObject {
     /// being one.
     @Published var sessions: [String: [AgentSession]] = [:]
 
-    /// Which cell the cursor is over, if any. Driven from the window controller
-    /// rather than SwiftUI's `.onHover`: the panel ignores mouse events until
-    /// the cursor is over it, so SwiftUI cannot see the crossing that turns
-    /// event handling on in the first place.
-    @Published var hoveredIndex: Int?
+    /// Which cell's usage card is open, if any. Set by clicking a ring, not by
+    /// hovering — a parked pointer on the screen edge kept throwing cards up.
+    @Published var selectedIndex: Int?
     /// Ticked on refresh so the "Resets in N min" copy stays honest.
     @Published var now: Date = Date()
 
@@ -255,9 +253,9 @@ final class NotchViewModel: ObservableObject {
         ActivitySummary(sessions: sessions[providerID] ?? [])
     }
 
-    var hoveredSnapshot: ProviderSnapshot? {
-        guard let hoveredIndex, snapshots.indices.contains(hoveredIndex) else { return nil }
-        return snapshots[hoveredIndex]
+    var selectedSnapshot: ProviderSnapshot? {
+        guard let selectedIndex, snapshots.indices.contains(selectedIndex) else { return nil }
+        return snapshots[selectedIndex]
     }
 
     var shapeLength: CGFloat { shapeLength(cellCount: snapshots.count) }
