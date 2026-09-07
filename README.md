@@ -1,5 +1,9 @@
 # Codenotch
 
+This is a fork of [vinzdg/codenotch](https://github.com/vinzdg/codenotch) to add
+**GitHub Copilot**. Copilot is not in upstream; this copy reads VS Code's GitHub
+session and shows it as a ring beside the other assistants.
+
 A macOS app that pins a small black notch to a screen edge, showing how much of
 each coding assistant's usage limit you have burned — and whether it is still
 working, done, or waiting on you.
