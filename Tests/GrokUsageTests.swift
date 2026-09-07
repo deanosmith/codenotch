@@ -1,3 +1,4 @@
+import SQLite3
 import XCTest
 @testable import Codenotch
 
@@ -78,5 +79,71 @@ final class GrokUsageTests: XCTestCase {
 
     func testHumanizesTheProductNameTheWayTheModalWritesIt() {
         XCTAssertEqual(GrokUsage.humanize("GrokBuild"), "Grok Build")
+    }
+}
+
+final class GrokCredentialsTests: XCTestCase {
+    private func writeAuth(expiresAt: String) throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("grok-auth-\(UUID().uuidString).json")
+        let json = """
+        {"https://auth.x.ai::aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee":{\
+          "key":"gsk_test","email":"octocat@x.ai",\
+          "expires_at":"\(expiresAt)","oidc_issuer":"https://auth.x.ai"}}
+        """
+        try json.write(to: url, atomically: true, encoding: .utf8)
+        return url
+    }
+
+    func testALiveTokenLoads() throws {
+        let url = try writeAuth(expiresAt: "2099-01-01T00:00:00.000Z")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let creds = try GrokCredentials.load(from: url)
+        XCTAssertEqual(creds.email, "octocat@x.ai")
+        XCTAssertFalse(creds.isExpired)
+        XCTAssertEqual(GrokCredentials.account(from: url)?.label, "octocat@x.ai")
+    }
+
+    /// An expired CLI file is a sign-out. Claude Code would refresh itself
+    /// overnight; Grok CLI only does that when you run `grok`, so treating
+    /// this as `credentialExpired` left a dash and "Waiting for the first
+    /// reading…" on a session that would never come back.
+    func testAnExpiredTokenIsNeedsAuth() throws {
+        let url = try writeAuth(expiresAt: "2026-07-13T20:16:20.058262Z")
+        defer { try? FileManager.default.removeItem(at: url) }
+        XCTAssertThrowsError(try GrokCredentials.load(from: url)) { error in
+            guard case UsageProviderError.needsAuth = error else {
+                return XCTFail("expected needsAuth, got \(error)")
+            }
+        }
+        XCTAssertNil(GrokCredentials.account(from: url), "Settings must not pretend the CLI is still signed in")
+        let creds = try GrokCredentials.load(from: url, allowingExpired: true)
+        XCTAssertTrue(creds.isExpired)
+    }
+
+    func testChromeSessionIsDetectedFromCookieNamesOnly() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("chrome-cookies-\(UUID().uuidString).db")
+        defer { try? FileManager.default.removeItem(at: url) }
+        var db: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(url.path, &db), SQLITE_OK)
+        sqlite3_exec(db, "CREATE TABLE cookies (host_key TEXT, name TEXT);", nil, nil, nil)
+        sqlite3_exec(db, "INSERT INTO cookies (host_key, name) VALUES ('.grok.com', 'sso');", nil, nil, nil)
+        sqlite3_close(db)
+        XCTAssertTrue(GrokCredentials.chromeHasGrokSession(cookiesURL: url))
+    }
+
+    func testAMissingChromeStoreIsNotASession() {
+        let missing = URL(fileURLWithPath: "/tmp/codenotch-no-chrome-\(UUID().uuidString)/Cookies")
+        XCTAssertFalse(GrokCredentials.chromeHasGrokSession(cookiesURL: missing))
+    }
+
+    func testNeedsAuthNamesTheCLINotGrokCom() {
+        let snap = ProviderSnapshot(
+            id: "grok", displayName: "Grok", glyph: .grok,
+            fidelity: .official, status: .needsAuth, windows: []
+        )
+        XCTAssertEqual(snap.statusMessage,
+                       "Run grok login — grok.com in Chrome is a different session")
     }
 }

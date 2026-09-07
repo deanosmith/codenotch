@@ -164,6 +164,8 @@ struct ProviderSnapshot: Identifiable, Equatable {
         case "gemini":     return "Sign in to Antigravity to read your usage"
         case "glm":        return "Set up a GLM Coding Plan key for a coding tool to read your usage"
         case "opencode":   return "Connect the Go plan in OpenCode to read your usage"
+        case "copilot":    return "Sign in to GitHub Copilot in VS Code"
+        case "grok":       return "Run grok login — grok.com in Chrome is a different session"
         default:           return "Sign in to \(displayName) to read your usage"
         }
     }

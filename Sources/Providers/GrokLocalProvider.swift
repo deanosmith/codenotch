@@ -1,11 +1,12 @@
 import Foundation
 import os
 
-/// Reads Grok Build usage from the same billing endpoint the CLI's `/usage` uses.
+/// Reads the weekly SuperGrok pool from the same billing endpoint the CLI's
+/// `/usage` uses.
 ///
-/// The credential is Grok's own `~/.grok/auth.json` session — the CLI's job to
-/// refresh, not this app's. Credits (`?format=credits`) is the weekly Grok
-/// Build allowance, and the only number this endpoint actually states.
+/// The credential is `~/.grok/auth.json` — `grok login`'s job to mint and
+/// refresh, not this app's. grok.com in Chrome holds a different session;
+/// that page's billing call cannot be replayed from cookies alone.
 actor GrokLocalProvider: UsageProvider {
     nonisolated let id = "grok"
     nonisolated let displayName = "Grok"
@@ -20,15 +21,12 @@ actor GrokLocalProvider: UsageProvider {
         self.authURL = authURL
     }
 
-    nonisolated var signInRoute: SignInRoute {
-        .guidance("Run grok login — it signs in and refreshes the token this reads.")
-    }
+    nonisolated var signInRoute: SignInRoute { GrokCredentials.signInRoute }
 
     nonisolated func account() -> ProviderAccount? { GrokCredentials.account() }
 
     func fetchSnapshot() async throws -> ProviderSnapshot {
         let credentials = try GrokCredentials.load(from: authURL)
-        if credentials.isExpired { throw UsageProviderError.credentialExpired }
 
         let credits = try await body(from: creditsURL, token: credentials.accessToken)
         Log.usage.debug("grok credits -> \(credits.prefix(400), privacy: .public)")

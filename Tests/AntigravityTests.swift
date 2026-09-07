@@ -631,7 +631,7 @@ final class FirstRunCopyTests: XCTestCase {
     /// distinction that catches them is Claude *Code*.
     func testTheSetupNoteNamesEveryToolAndTheCodeDistinction() {
         let copy = SettingsView.setupCopy
-        for tool in ["Claude Code", "Cursor", "Codex", "Antigravity"] {
+        for tool in ["Claude Code", "Cursor", "Codex", "Antigravity", "Copilot"] {
             XCTAssertTrue(copy.contains(tool), "the setup note never mentions \(tool)")
         }
         XCTAssertTrue(copy.contains("not the Claude app"),
@@ -934,8 +934,8 @@ final class ReauthorizeTests: XCTestCase {
     }
 }
 
-/// Only two providers keep a credential in the keychain; the others read files
-/// and can never raise a prompt.
+/// Only keychain-backed providers offer an Allow Access button; the others
+/// read files and can never raise a prompt.
 final class KeychainProviderTests: XCTestCase {
     private func summary(_ id: String) -> ProviderSummary {
         ProviderSummary(id: id, name: id, glyph: .claude, account: nil,
@@ -946,6 +946,7 @@ final class KeychainProviderTests: XCTestCase {
         XCTAssertTrue(summary("claude").usesKeychain)
         XCTAssertTrue(summary("claude-work").usesKeychain, "every profile's token is a keychain item")
         XCTAssertTrue(summary("gemini").usesKeychain)
+        XCTAssertTrue(summary("copilot").usesKeychain, "VS Code encrypts github.auth behind Code Safe Storage")
         XCTAssertFalse(summary("cursor").usesKeychain, "Cursor reads a file, not the keychain")
         XCTAssertFalse(summary("codex").usesKeychain, "Codex reads a file, not the keychain")
     }
